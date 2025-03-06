@@ -1,0 +1,62 @@
+<script>
+    let bluetoothDevice = null;
+    let gattServer = null;
+    let controlCharacteristic = null;
+
+    const SERVICE_UUID = '00001234-0000-1000-8000-00805f9b34fb'; 
+    const CHARACTERISTIC_UUID = '00005678-0000-1000-8000-00805f9b34fb';
+
+    async function connectToBot() {
+        try {
+            // Request a Bluetooth device
+            bluetoothDevice = await navigator.bluetooth.requestDevice({
+                acceptAllDevices: true, // You can filter by name or services if needed
+                optionalServices: [SERVICE_UUID] // Replace with your bot's service UUID
+            });
+
+            // Connect to GATT Server
+            gattServer = await bluetoothDevice.gatt.connect();
+
+            // Get the service
+            const service = await gattServer.getPrimaryService(SERVICE_UUID);
+
+            // Get the control characteristic
+            controlCharacteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
+
+            alert("Connected to the bot!");
+        } catch (error) {
+            console.error('Error connecting to the bot:', error);
+            alert('Failed to connect to the bot. Please try again.');
+        }
+        }
+
+    async function move(direction) {
+        if (!controlCharacteristic) {
+            alert("Please connect to the bot first!");
+            return;
+        }
+
+        // Map movement commands to byte values (example: 'forward' -> 0x01)
+        const commands = {
+            forward: 0x01,
+            backward: 0x02,
+            left: 0x03,
+            right: 0x04
+        };
+
+        const command = commands[direction];
+        if (command === undefined) {
+            console.error('Invalid direction:', direction);
+            return;
+        }
+
+        try {
+            // Write the movement command to the characteristic
+            const commandBuffer = new Uint8Array([command]);
+            await controlCharacteristic.writeValue(commandBuffer);
+            console.log(`Sent command: ${direction}`);
+        } catch (error) {
+            console.error('Error sending command:', error);
+        }
+    }
+</script>
